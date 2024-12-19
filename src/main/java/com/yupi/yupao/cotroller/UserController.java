@@ -10,6 +10,7 @@ import com.yupi.yupao.model.UserRegisterRequest;
 import com.yupi.yupao.model.domain.User;
 import com.yupi.yupao.service.UserService;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -152,4 +153,19 @@ public class UserController {
         }
         return true;
     }
+
+    /**
+     * 根据标签搜索用户
+     * @param tagNameList
+     * @return
+     */
+    @GetMapping("/search/tags")
+    public BaseResponse<List<User>> searchUsersByTags(@RequestParam(required = false) List<String> tagNameList) {
+        if (CollectionUtils.isEmpty(tagNameList)) {
+            throw new WxException(ErrorCode.PARAMS_ERROR, "标签列表”不能为空");
+        }
+        List<User> userList = userService.searchUsersByTags(tagNameList);
+        return Result.ok(userList);
+    }
+
 }

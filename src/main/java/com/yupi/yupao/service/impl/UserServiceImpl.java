@@ -1,19 +1,25 @@
 package com.yupi.yupao.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.yupi.yupao.common.ErrorCode;
+import com.yupi.yupao.exception.WxException;
 import com.yupi.yupao.model.domain.User;
 import com.yupi.yupao.service.UserService;
 import com.yupi.yupao.mapper.UserMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.yupi.yupao.contant.UserConstant.USER_LOGIN_STATE;
 
@@ -28,6 +34,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         implements UserService {
 
     private static final String SALT = "wxx";
+    private final UserMapper userMapper;
+
+    public UserServiceImpl(UserMapper userMapper) {
+        this.userMapper = userMapper;
+    }
 
 
     /**
@@ -39,7 +50,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @return
      */
     @Override
-    public long userRegister(String userAccount, String userPassword, String checkPassword,String planetCode) {
+    public long userRegister(String userAccount, String userPassword, String checkPassword, String planetCode) {
 
         //输入非空判断
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
@@ -54,7 +65,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return -1;
         }
         //星球id
-        if(planetCode.length()>5){
+        if (planetCode.length() > 5) {
             return -1;
         }
         //账号不包含特殊字符
@@ -82,7 +93,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return -1;
         }
         //星球id不能重复
-         wrapper = new LambdaQueryWrapper<>();
+        wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getPlanetCode, planetCode);
         count = baseMapper.selectCount(wrapper);
         if (count > 0) {
@@ -160,28 +171,32 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     /**
      * 脱敏
+     *
      * @param user
      * @return
      */
     @Override
-    public User getSafetyUser(User user){
-    User newUser = new User();
-    newUser.setId(user.getId());
-    newUser.setUsername(user.getUsername());
-    newUser.setUserAccount(user.getUserAccount());
-    newUser.setAvatarUrl(user.getAvatarUrl());
-    newUser.setGender(user.getGender());
-    newUser.setPhone(user.getPhone());
-    newUser.setEmail(user.getEmail());
-    newUser.setPlanetCode(user.getPlanetCode());
-    newUser.setUserRole(user.getUserRole());
-    newUser.setUserStatus(user.getUserStatus());
-    newUser.setCreateTime(user.getCreateTime());
-    return newUser;
-}
+    public User getSafetyUser(User user) {
+        User newUser = new User();
+        newUser.setId(user.getId());
+        newUser.setUsername(user.getUsername());
+        newUser.setUserAccount(user.getUserAccount());
+        newUser.setAvatarUrl(user.getAvatarUrl());
+        newUser.setGender(user.getGender());
+        newUser.setPhone(user.getPhone());
+        newUser.setEmail(user.getEmail());
+        newUser.setPlanetCode(user.getPlanetCode());
+        newUser.setUserRole(user.getUserRole());
+        newUser.setTags(user.getTags());
+        newUser.setUserStatus(user.getUserStatus());
+        newUser.setCreateTime(user.getCreateTime());
+
+        return newUser;
+    }
 
     /**
      * 退出登录
+     *
      * @param request
      * @return
      */
@@ -189,6 +204,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public boolean userLogOut(HttpServletRequest request) {
         request.getSession().removeAttribute(USER_LOGIN_STATE);
         return true;
+    }
+
+
+    /**
+     * 根据标签搜索用户
+     *
+     * @param tagNameList
+     * @return
+     */
+    @Override
+    public List<User> searchUsersByTags(List<String> tagNameList) {
+        if (CollectionUtils.isEmpty(tagNameList)) {
+            throw new WxException(ErrorCode.PARAMS_ERROR, "请求参数为空");
+        }
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        for (String tagName : tagNameList) {
+            queryWrapper.like("tags", tagName);
+        }
+        List<User> userList = userMapper.selectList(queryWrapper);
+        return userList.stream().map(this::getSafetyUser).collect(Collectors.toList());
     }
 }
 

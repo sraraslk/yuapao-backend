@@ -6,6 +6,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.Arrays;
+import java.util.List;
+
 @SpringBootTest
 class UserServiceTest {
 
@@ -83,5 +86,14 @@ userService.save(user);
          String userAccount = "CatMark";
         String  userPassword = "12345678";
         //userService.doLogin(userAccount,)
+    }
+
+    @Test
+    void searchUsersByTags(){
+        List<String> tagNameList = Arrays.asList("java", "python");
+        List<User> userList = userService.searchUsersByTags(tagNameList);
+        Assert.assertNotNull(userList);
+        System.out.println(userList);
+
     }
 }
